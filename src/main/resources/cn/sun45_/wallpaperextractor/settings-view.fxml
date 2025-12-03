@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<VBox alignment="CENTER" spacing="25.0" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="cn.sun45_.wallpaperextractor.controller.SettingsController"
+      style="-fx-background-color: #f8f9fa;">
+    <padding>
+        <Insets bottom="40.0" left="50.0" right="50.0" top="40.0"/>
+    </padding>
+
+    <!-- 应用标题 -->
+    <Label text="壁纸提取器" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #343a40;"/>
+
+    <!-- 拖拽区域 -->
+    <StackPane fx:id="dragArea"
+               style="-fx-border-color: #007bff; -fx-border-width: 2px; -fx-border-style: dashed; -fx-background-color: #ffffff; -fx-cursor: hand; -fx-background-radius: 12px; -fx-border-radius: 12px; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 2);"
+               onMouseClicked="#onDragAreaClicked" prefWidth="450" prefHeight="150">
+        <VBox alignment="CENTER" spacing="12">
+            <Label text="📁" style="-fx-font-size: 42px; -fx-text-fill: #007bff;"/>
+            <Label fx:id="hintLabel" text="点击选择或拖入Steam安装路径"
+                   style="-fx-font-size: 15px; -fx-text-fill: #495057; -fx-font-weight: 500;"/>
+        </VBox>
+    </StackPane>
+
+    <!-- 应用描述 -->
+    <Label fx:id="descriptionLabel" wrapText="true" maxWidth="550"
+           style="-fx-font-size: 14px; -fx-text-fill: #495057; -fx-text-alignment: left; -fx-line-spacing: 2.0; -fx-font-family: 'Segoe UI', system-ui, sans-serif;"/>
+</VBox>
