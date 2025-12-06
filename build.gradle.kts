@@ -27,7 +27,7 @@ plugins {
 }
 
 group = "cn.Sun45_"
-version = "1.0.0"
+version = "1.0.1"
 
 repositories {
     mavenCentral()
@@ -51,6 +51,7 @@ tasks.withType<JavaCompile> {
 application {
     mainModule.set("cn.sun45_.wallpaperextractor")
     mainClass.set("cn.sun45_.wallpaperextractor.WallpaperExtractorApp")
+    applicationDefaultJvmArgs = listOf("-Dfile.encoding=GBK")
 }
 
 javafx {
@@ -73,6 +74,7 @@ dependencies {
         exclude(group = "org.openjfx")
     }
     implementation("com.dlsc.gemsfx:gemsfx:2.16.0")
+    implementation("com.dustinredmond.fxtrayicon:FXTrayIcon:4.2.3")
     implementation("one.jpro.jproutils:tree-showing:0.2.2")
     testImplementation("org.junit.jupiter:junit-jupiter-api:${junitVersion}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${junitVersion}")
@@ -111,7 +113,8 @@ tasks.register<Exec>("jpackageExe") {
         "--vendor", "Sun45",
         "--app-version", version.toString(),
         "--icon", iconPath,
-        "--install-dir", "WallpaperExtractor"
+        "--install-dir", "WallpaperExtractor",
+        "--java-options", "-Dfile.encoding=GBK"
     )
 
     doFirst {

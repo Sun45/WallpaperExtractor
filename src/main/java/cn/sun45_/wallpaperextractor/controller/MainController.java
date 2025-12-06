@@ -4,10 +4,10 @@ import cn.sun45_.wallpaperextractor.Constants;
 import cn.sun45_.wallpaperextractor.WallpaperExtractorApp;
 import cn.sun45_.wallpaperextractor.component.WorkshopListCell;
 import cn.sun45_.wallpaperextractor.model.WorkshopListItem;
-import cn.sun45_.wallpaperextractor.utils.AppConfig;
 import cn.sun45_.wallpaperextractor.monitor.FileWatcher;
-import cn.sun45_.wallpaperextractor.utils.FileUtils;
 import cn.sun45_.wallpaperextractor.monitor.WorkshopData;
+import cn.sun45_.wallpaperextractor.utils.AppConfig;
+import cn.sun45_.wallpaperextractor.utils.FileUtils;
 import com.dlsc.gemsfx.CalendarPicker;
 import com.dlsc.gemsfx.TimePicker;
 import javafx.application.Platform;
@@ -28,12 +28,8 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * 主界面控制器
@@ -286,12 +282,42 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
         Platform.runLater(() -> {
             if (workshopDataList != null && !workshopDataList.isEmpty()) {
                 updateWorkshopItems(workshopDataList);
-                countLabel.setText(workshopDataList.size() + "个");
+                int totalCount = workshopDataList.size();
+                countLabel.setText(totalCount + "个");
+
+                int actualCopyCount = calculateActualCopyCount();
+                if (WallpaperExtractorApp.application != null) {
+                    WallpaperExtractorApp.application.updateCopyCount(actualCopyCount);
+                }
             } else {
                 clearWorkshopItems();
                 countLabel.setText("0个");
+
+                if (WallpaperExtractorApp.application != null) {
+                    WallpaperExtractorApp.application.updateCopyCount(0);
+                }
             }
         });
+    }
+
+    /**
+     * 计算实际会拷贝的项目数量
+     *
+     * @return 实际会拷贝的项目数量（排除已经拷贝成功的项目）
+     */
+    private int calculateActualCopyCount() {
+        if (workshopItemsList == null || workshopItemsList.isEmpty()) {
+            return 0;
+        }
+
+        int count = 0;
+        for (WorkshopListItem item : workshopItemsList) {
+            // 只计算非成功状态的项目（NOT_COPIED, COPYING, FAILED）
+            if (item.getCopyStatus() != WorkshopListItem.CopyStatus.SUCCESS) {
+                count++;
+            }
+        }
+        return count;
     }
 
     /**
@@ -394,6 +420,18 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
      */
     private String formatDateTime(LocalDate date, LocalTime time) {
         return date.format(dateFormatter) + " " + time.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+    }
+
+    /**
+     * 开始拷贝操作 - 供系统托盘菜单调用
+     */
+    public void startCopying() {
+        Platform.runLater(() -> {
+            // 模拟点击拷贝按钮
+            if (copyButton != null) {
+                copyButton.fire();
+            }
+        });
     }
 
     /**
@@ -668,6 +706,12 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
             String message = String.format("拷贝完成: 成功%d个, 失败%d个",
                     successCount, failedCount);
             setStatusMessage(message);
+
+            // 拷贝完成后更新系统托盘菜单中的拷贝数量
+            int actualCopyCount = calculateActualCopyCount();
+            if (WallpaperExtractorApp.application != null) {
+                WallpaperExtractorApp.application.updateCopyCount(actualCopyCount);
+            }
         });
     }
 
@@ -710,8 +754,8 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
          * 构造函数
          *
          * @param copyVideoMode 拷贝模式：true表示拷贝视频文件模式，false表示拷贝目录模式
-         * @param copyPath 拷贝目标路径字符串
-         * @param targetDir 拷贝目标目录路径对象
+         * @param copyPath      拷贝目标路径字符串
+         * @param targetDir     拷贝目标目录路径对象
          */
         public CopyConfig(boolean copyVideoMode, String copyPath, Path targetDir) {
             this.copyVideoMode = copyVideoMode;

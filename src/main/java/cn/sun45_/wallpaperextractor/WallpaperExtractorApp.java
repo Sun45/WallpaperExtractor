@@ -2,7 +2,9 @@ package cn.sun45_.wallpaperextractor;
 
 import cn.sun45_.wallpaperextractor.controller.MainController;
 import cn.sun45_.wallpaperextractor.utils.AppConfig;
+import com.dustinredmond.fxtrayicon.FXTrayIcon;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
@@ -42,6 +44,11 @@ public class WallpaperExtractorApp extends Application {
     public static Stage primaryStage;
 
     /**
+     * 系统图标
+     */
+    private FXTrayIcon trayIcon;
+
+    /**
      * 设置界面场景
      */
     private Scene settingsScene;
@@ -70,6 +77,28 @@ public class WallpaperExtractorApp extends Application {
     }
 
     /**
+     * 更新拷贝数量
+     *
+     * @param count 新的拷贝数量
+     */
+    public void updateCopyCount(int count) {
+        // 更新系统托盘菜单中的拷贝数量显示
+        if (trayIcon != null) {
+            Platform.runLater(() -> {
+                try {
+                    // 直接更新第一个菜单项的标签
+                    java.awt.MenuItem menuItem = trayIcon.getMenuItem(0);
+                    if (menuItem != null) {
+                        menuItem.setLabel("开始拷贝 (" + count + "个)");
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "更新系统托盘菜单失败: ", e);
+                }
+            });
+        }
+    }
+
+    /**
      * 应用程序启动方法
      *
      * <p>JavaFX应用程序的主入口点，负责初始化界面和启动应用程序</p>
@@ -86,6 +115,9 @@ public class WallpaperExtractorApp extends Application {
 
         // 设置应用程序图标
         setApplicationIcon();
+
+        // 设置系统托盘图标
+        setupSystemTrayIcon();
 
         // 设置窗口不可调整大小
         primaryStage.setResizable(false);
@@ -154,6 +186,53 @@ public class WallpaperExtractorApp extends Application {
             primaryStage.getIcons().add(icon);
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "无法加载应用程序图标: ", e);
+        }
+    }
+
+    /**
+     * 设置系统托盘图标
+     *
+     * <p>使用FXTrayIcon创建系统托盘图标，支持应用程序最小化到系统托盘</p>
+     */
+    private void setupSystemTrayIcon() {
+        try {
+            trayIcon = new FXTrayIcon(primaryStage, getClass().getResource("icon.png"));
+            trayIcon.setTrayIconTooltip(Constants.NAME);
+
+            // 添加开始拷贝菜单项，显示拷贝数量
+            trayIcon.addMenuItem("开始拷贝 (0个)", event -> {
+                if (mainController != null) {
+                    mainController.startCopying();
+                }
+            });
+
+            // 添加分隔线
+            trayIcon.addSeparator();
+
+            trayIcon.addMenuItem("退出", event -> {
+                Platform.exit();
+                System.exit(0);
+            });
+
+            // 获取底层AWT TrayIcon，精确控制点击事件
+            java.awt.TrayIcon awtTrayIcon = trayIcon.getRestricted().getTrayIcon();
+            awtTrayIcon.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    // 只处理左键点击事件，右键点击自动显示菜单
+                    if (e.getButton() == java.awt.event.MouseEvent.BUTTON1) {
+                        Platform.runLater(() -> {
+                            primaryStage.show();
+                            primaryStage.toFront();
+                            primaryStage.requestFocus();
+                        });
+                    }
+                }
+            });
+
+            trayIcon.show();
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "系统托盘图标设置失败: ", e);
         }
     }
 

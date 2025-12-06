@@ -15,6 +15,8 @@ module cn.sun45_.wallpaperextractor {
     requires com.dlsc.gemsfx;
     requires org.kordamp.ikonli.fontawesome5;
     requires java.logging;
+    requires com.dustinredmond.fxtrayicon;
+    requires javafx.base;
 
     opens cn.sun45_.wallpaperextractor to javafx.fxml;
     exports cn.sun45_.wallpaperextractor;
