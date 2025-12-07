@@ -27,7 +27,7 @@ plugins {
 }
 
 group = "cn.Sun45_"
-version = "1.0.1"
+version = "1.0.2"
 
 repositories {
     mavenCentral()

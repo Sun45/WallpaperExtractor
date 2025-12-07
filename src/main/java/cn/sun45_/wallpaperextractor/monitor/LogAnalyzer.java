@@ -66,15 +66,22 @@ public class LogAnalyzer {
     private static final Pattern UNSUBSCRIBE_PATTERN = Pattern.compile("Detected workshop change : removing unsubscribed item (\\d+)");
 
     /**
-     * 分析日志内容，提取AppID为431960且时间大于开始时间的订阅/取消订阅记录
-     * 只处理两种类型的日志：
-     * 1. "Subscribed to item XXXX" - 订阅项
-     * 2. "Unsubscribed from item XXXX" - 取消订阅项
-     * <p>
-     * 实现基于ID的状态覆盖机制：当同一个ID出现新的订阅状态时，会覆盖旧的记录
+     * 分析Steam日志内容，提取Wallpaper Engine (AppID 431960)的Workshop项目状态变化记录
      *
-     * @param logContent 日志内容列表
-     * @return 筛选后的WorkshopModel列表（每个ID只保留最新的状态）
+     * <p>处理四种类型的Workshop变更记录：</p>
+     * <ul>
+     *   <li>订阅项：Detected workshop change : added subscribed item {ID}</li>
+     *   <li>取消订阅项：Detected workshop change : removing unsubscribed item {ID}</li>
+     *   <li>未使用项移除：Detected workshop change : removing unused item {ID}</li>
+     *   <li>未知项移除：Detected workshop change : removing unknown item {ID}</li>
+     * </ul>
+     *
+     * <p>实现基于ID的状态覆盖机制：当同一个Workshop ID出现新的订阅状态时，会覆盖旧的记录，
+     * 确保返回的数据反映每个ID的最新状态。未使用项和未知项会从结果中移除对应ID的记录。</p>
+     *
+     * @param logContent 日志内容列表，每行包含时间戳和日志信息
+     * @param startTime  起始时间字符串，格式为"yyyy-MM-dd HH:mm:ss"，用于过滤日志时间
+     * @return 筛选后的WorkshopData列表，每个ID只保留最新的订阅状态
      */
     public static List<WorkshopData> analyzeLog(List<String> logContent, String startTime) {
         if (logContent == null || logContent.isEmpty()) {
@@ -101,7 +108,7 @@ public class LogAnalyzer {
 
             String logTime = timeMatcher.group(1);
 
-            // 时间过滤：如果设置了开始时间，只处理时间大于等于开始时间的日志
+            // 时间过滤：如果设置了起始时间，只处理时间大于等于起始时间的日志
             if (shouldFilterByTime && logTime.compareTo(startTime) < 0) {
                 continue;
             }

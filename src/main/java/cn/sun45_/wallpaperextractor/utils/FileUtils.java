@@ -34,11 +34,11 @@ public class FileUtils {
      */
     public static void copyVideoFiles(Path sourceDir, Path targetDir) throws IOException {
         if (sourceDir == null || targetDir == null) {
-            throw new IOException("源目录或目标目录不能为null");
+            throw new IOException(ResourceManager.getString("error.source.or.target.dir.null"));
         }
 
         if (!Files.exists(sourceDir) || !Files.isDirectory(sourceDir)) {
-            throw new IOException("文件夹不存在");
+            throw new IOException(ResourceManager.getString("error.directory.not.exists"));
         }
 
         Files.createDirectories(targetDir);
@@ -59,7 +59,7 @@ public class FileUtils {
         }
 
         if (!copied) {
-            throw new IOException("视频文件不存在");
+            throw new IOException(ResourceManager.getString("error.video.file.not.exists"));
         }
     }
 
@@ -75,11 +75,11 @@ public class FileUtils {
      */
     public static void copyDirectory(Path sourceDir, Path targetDir) throws IOException {
         if (sourceDir == null || targetDir == null) {
-            throw new IOException("源目录或目标目录不能为null");
+            throw new IOException(ResourceManager.getString("error.source.or.target.dir.null"));
         }
 
         if (!Files.exists(sourceDir) || !Files.isDirectory(sourceDir)) {
-            throw new IOException("文件夹不存在");
+            throw new IOException(ResourceManager.getString("error.directory.not.exists"));
         }
 
         // 创建目标目录（包含源目录名的子目录）
@@ -113,8 +113,18 @@ public class FileUtils {
     /**
      * 安全删除目录及其内容
      *
+     * <p>递归删除目录及其所有子目录和文件，使用反向排序确保先删除文件再删除目录</p>
+     *
+     * <p>实现细节：</p>
+     * <ul>
+     *   <li>使用Files.walk()遍历目录树</li>
+     *   <li>使用Comparator.reverseOrder()确保从最深层的文件开始删除</li>
+     *   <li>对每个文件/目录使用Files.deleteIfExists()安全删除</li>
+     *   <li>捕获并记录删除失败的文件/目录，但不中断整体删除过程</li>
+     * </ul>
+     *
      * @param dirPath 要删除的目录路径
-     * @return 如果删除成功返回true，否则返回false
+     * @return 如果目录成功删除返回true，如果目录不存在或不是目录返回false，删除过程中发生异常返回false
      */
     public static boolean deleteDirectory(Path dirPath) {
         if (dirPath == null) {
@@ -136,12 +146,12 @@ public class FileUtils {
                         try {
                             Files.deleteIfExists(path);
                         } catch (IOException ex) {
-                            LOGGER.log(Level.WARNING, "删除文件失败: " + path, ex);
+                            LOGGER.log(Level.WARNING, ResourceManager.getFormattedString("error.delete.file.failed.format", path), ex);
                         }
                     });
             return true;
         } catch (IOException ex) {
-            LOGGER.log(Level.SEVERE, "删除目录失败: " + dirPath, ex);
+            LOGGER.log(Level.SEVERE, ResourceManager.getFormattedString("error.delete.directory.failed.format", dirPath), ex);
             return false;
         }
     }

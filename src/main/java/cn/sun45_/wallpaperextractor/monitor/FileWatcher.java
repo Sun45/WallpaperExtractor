@@ -1,6 +1,7 @@
 package cn.sun45_.wallpaperextractor.monitor;
 
 import cn.sun45_.wallpaperextractor.Constants;
+import cn.sun45_.wallpaperextractor.utils.ResourceManager;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -58,7 +59,7 @@ public class FileWatcher {
     private volatile ScheduledExecutorService scheduler;
 
     /**
-     * 开始时间（用于过滤日志）
+     * 起始时间（用于过滤日志）
      */
     private String startTime;
 
@@ -86,13 +87,13 @@ public class FileWatcher {
      * 构造文件监听器
      *
      * @param listener  文件变化监听器，不能为null
-     * @param startTime 开始时间，用于过滤日志，可以为null
+     * @param startTime 起始时间，用于过滤日志，可以为null
      */
     public FileWatcher(FileChangeListener listener, String startTime) {
-        this.listener = Objects.requireNonNull(listener, "文件变化监听器不能为null");
+        this.listener = Objects.requireNonNull(listener, ResourceManager.getString("error.file.change.listener.null"));
         this.startTime = startTime;
         this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread thread = new Thread(r, "FileWatcher-Thread");
+            Thread thread = new Thread(r, ResourceManager.getString("thread.file.watcher"));
             thread.setDaemon(true);
             return thread;
         });
@@ -108,7 +109,7 @@ public class FileWatcher {
      */
     public synchronized void startWatching(String steamPath) {
         if (steamPath == null || steamPath.trim().isEmpty()) {
-            throw new IllegalArgumentException("Steam路径不能为null或空");
+            throw new IllegalArgumentException(ResourceManager.getString("error.steam.path.null.or.empty"));
         }
 
         // 停止当前监听
@@ -123,14 +124,14 @@ public class FileWatcher {
     }
 
     /**
-     * 更新开始时间
+     * 更新起始时间
      *
-     * @param newTime 新的开始时间，格式为"yyyy-MM-dd HH:mm:ss"
+     * @param newTime 新的起始时间，格式为"yyyy-MM-dd HH:mm:ss"
      * @throws IllegalArgumentException 如果newTime为null
      */
     public synchronized void updateStartTime(String newTime) {
         if (newTime == null) {
-            throw new IllegalArgumentException("开始时间不能为null");
+            throw new IllegalArgumentException(ResourceManager.getString("error.start.time.null"));
         }
         this.startTime = newTime;
         // 清空缓存以重新过滤日志
@@ -171,7 +172,7 @@ public class FileWatcher {
             // 更新修改时间
             lastModifiedTime = currentModifiedTime;
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "获取文件修改时间时发生异常: ", e);
+            LOGGER.log(Level.WARNING, ResourceManager.getString("error.get.file.modify.time.error"), e);
             return;
         }
 
@@ -209,8 +210,18 @@ public class FileWatcher {
     /**
      * 读取文件内容
      *
+     * <p>读取指定路径的文件内容，按行返回字符串列表</p>
+     *
+     * <p>实现细节：</p>
+     * <ul>
+     *   <li>检查文件是否存在，不存在返回null</li>
+     *   <li>检查文件是否可读，不可读返回null</li>
+     *   <li>使用UTF-8编码读取文件所有行</li>
+     *   <li>捕获并记录读取异常，返回null</li>
+     * </ul>
+     *
      * @param filePath 文件路径
-     * @return 文件内容列表，读取失败返回null
+     * @return 文件内容列表（每行一个字符串），如果文件不存在、不可读或读取失败返回null
      */
     private List<String> readFileByLine(Path filePath) {
         try {
@@ -224,7 +235,7 @@ public class FileWatcher {
 
             return Files.readAllLines(filePath, StandardCharsets.UTF_8);
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "读取文件行时发生异常: ", e);
+            LOGGER.log(Level.SEVERE, ResourceManager.getString("error.read.file.lines.error"), e);
             return null;
         }
     }
@@ -241,7 +252,7 @@ public class FileWatcher {
         if (scheduler != null) {
             scheduler.shutdownNow();
             scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread thread = new Thread(r, "FileWatcher-Thread");
+                Thread thread = new Thread(r, ResourceManager.getString("thread.file.watcher"));
                 thread.setDaemon(true);
                 return thread;
             });

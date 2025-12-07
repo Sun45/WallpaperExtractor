@@ -3,7 +3,9 @@ package cn.sun45_.wallpaperextractor.controller;
 import cn.sun45_.wallpaperextractor.Constants;
 import cn.sun45_.wallpaperextractor.WallpaperExtractorApp;
 import cn.sun45_.wallpaperextractor.utils.AppConfig;
+import cn.sun45_.wallpaperextractor.utils.ResourceManager;
 import javafx.fxml.FXML;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
@@ -11,6 +13,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.DirectoryChooser;
 
+import java.awt.*;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.List;
@@ -49,9 +52,23 @@ public class SettingsController {
     private Label descriptionLabel;
 
     @FXML
+    private Hyperlink githubLink;
+
+    @FXML
     public void initialize() {
         descriptionLabel.setText(Constants.PROJECT_DESCRIPTION);
         setupDragAndDrop();
+    }
+
+    @FXML
+    protected void onGithubLinkClicked() {
+        try {
+            Desktop.getDesktop().browse(new java.net.URI("https://github.com/Sun45/WallpaperExtractor"));
+        } catch (Exception e) {
+            // 如果打开浏览器失败，可以显示错误信息
+            hintLabel.setText(ResourceManager.getFormattedString("status.github.open.error.format", e.getMessage()));
+            hintLabel.setTextFill(Color.RED);
+        }
     }
 
     private void setupDragAndDrop() {
@@ -87,7 +104,7 @@ public class SettingsController {
     @FXML
     protected void onDragAreaClicked() {
         DirectoryChooser directoryChooser = new DirectoryChooser();
-        directoryChooser.setTitle("选择Steam安装路径");
+        directoryChooser.setTitle(ResourceManager.getString("dialog.select.steam.path"));
 
         File selectedDirectory = directoryChooser.showDialog(WallpaperExtractorApp.primaryStage);
         if (selectedDirectory != null) {
@@ -104,7 +121,7 @@ public class SettingsController {
             // 切换到主界面
             switchToMainView();
         } else {
-            hintLabel.setText("未检测到Steam日志文件");
+            hintLabel.setText(ResourceManager.getString("status.steam.log.not.found"));
             hintLabel.setTextFill(Color.RED);
         }
     }

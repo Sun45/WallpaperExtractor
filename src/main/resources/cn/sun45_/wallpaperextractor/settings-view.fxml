@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <VBox alignment="CENTER" spacing="25.0" xmlns:fx="http://javafx.com/fxml"
@@ -12,7 +15,7 @@
     </padding>
 
     <!-- 应用标题 -->
-    <Label text="壁纸提取器" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #343a40;"/>
+    <Label text="%settings.title" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #343a40;"/>
 
     <!-- 拖拽区域 -->
     <StackPane fx:id="dragArea"
@@ -20,7 +23,7 @@
                onMouseClicked="#onDragAreaClicked" prefWidth="450" prefHeight="150">
         <VBox alignment="CENTER" spacing="12">
             <Label text="📁" style="-fx-font-size: 42px; -fx-text-fill: #007bff;"/>
-            <Label fx:id="hintLabel" text="点击选择或拖入Steam安装路径"
+            <Label fx:id="hintLabel" text="%drag.area.hint"
                    style="-fx-font-size: 15px; -fx-text-fill: #495057; -fx-font-weight: 500;"/>
         </VBox>
     </StackPane>
@@ -28,4 +31,14 @@
     <!-- 应用描述 -->
     <Label fx:id="descriptionLabel" wrapText="true" maxWidth="550"
            style="-fx-font-size: 14px; -fx-text-fill: #495057; -fx-text-alignment: left; -fx-line-spacing: 2.0; -fx-font-family: 'Segoe UI', system-ui, sans-serif;"/>
+
+    <!-- GitHub链接带头像 -->
+    <HBox alignment="CENTER_LEFT" spacing="8">
+        <ImageView fitWidth="32" fitHeight="32" preserveRatio="true">
+            <Image url="@profile-picture.jpg"/>
+        </ImageView>
+        <Hyperlink fx:id="githubLink" text="%github.link.text"
+                   style="-fx-font-size: 13px; -fx-text-fill: #007bff; -fx-border-color: transparent; -fx-underline: true;"
+                   onAction="#onGithubLinkClicked"/>
+    </HBox>
 </VBox>

@@ -163,11 +163,11 @@ public class WorkshopListItem {
         if (copyStatus == null) {
             throw new IllegalArgumentException("copyStatus参数不能为null");
         }
-        
+
         this.copyStatus = copyStatus;
-        this.copyStatusMessage = (copyStatusMessage != null && copyStatusMessage.length > 0) 
-            ? copyStatusMessage[0] 
-            : "";
+        this.copyStatusMessage = (copyStatusMessage != null && copyStatusMessage.length > 0)
+                ? copyStatusMessage[0]
+                : "";
     }
 
     /**

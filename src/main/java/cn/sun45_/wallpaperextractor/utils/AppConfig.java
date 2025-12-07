@@ -22,7 +22,7 @@ public class AppConfig {
         try {
             PREFS.clear();
         } catch (BackingStoreException e) {
-            String errorMsg = "清空应用程序配置失败";
+            String errorMsg = ResourceManager.getString("error.clear.config.failed");
             throw new RuntimeException(errorMsg, e);
         }
     }

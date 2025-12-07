@@ -8,6 +8,7 @@ import cn.sun45_.wallpaperextractor.monitor.FileWatcher;
 import cn.sun45_.wallpaperextractor.monitor.WorkshopData;
 import cn.sun45_.wallpaperextractor.utils.AppConfig;
 import cn.sun45_.wallpaperextractor.utils.FileUtils;
+import cn.sun45_.wallpaperextractor.utils.ResourceManager;
 import com.dlsc.gemsfx.CalendarPicker;
 import com.dlsc.gemsfx.TimePicker;
 import javafx.application.Platform;
@@ -171,7 +172,7 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
         initializeData();
 
         // 设置初始状态
-        setStatusMessage("等待Steam路径配置...");
+        setStatusMessage(ResourceManager.getString("status.waiting.for.steam.config"));
     }
 
     /**
@@ -194,7 +195,7 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
         idListView.setCellFactory(param -> new WorkshopListCell(this));
 
         // 初始化数量显示标签
-        countLabel.setText("0个");
+        countLabel.setText(ResourceManager.getString("count.label.zero"));
 
         // 初始化拷贝模式选择
         copyModeGroup = new ToggleGroup();
@@ -258,7 +259,7 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
         if (selectedDate != null && selectedTime != null) {
             currentTime = formatDateTime(selectedDate, selectedTime);
             fileWatcher.updateStartTime(currentTime);
-            setStatusMessage("设置自动检测起始时间: " + selectedDate + " " + selectedTime);
+            setStatusMessage(ResourceManager.getFormattedString("status.set.start.time.format", selectedDate, selectedTime));
         }
     }
 
@@ -283,7 +284,7 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
             if (workshopDataList != null && !workshopDataList.isEmpty()) {
                 updateWorkshopItems(workshopDataList);
                 int totalCount = workshopDataList.size();
-                countLabel.setText(totalCount + "个");
+                countLabel.setText(ResourceManager.getFormattedString("count.label.format", totalCount));
 
                 int actualCopyCount = calculateActualCopyCount();
                 if (WallpaperExtractorApp.application != null) {
@@ -291,7 +292,7 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
                 }
             } else {
                 clearWorkshopItems();
-                countLabel.setText("0个");
+                countLabel.setText(ResourceManager.getString("count.label.zero"));
 
                 if (WallpaperExtractorApp.application != null) {
                     WallpaperExtractorApp.application.updateCopyCount(0);
@@ -395,12 +396,12 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
                 // 确保先停止之前的监听
                 fileWatcher.stopWatching();
                 fileWatcher.startWatching(steamPath);
-                setStatusMessage("正在监听Steam日志文件...");
+                setStatusMessage(ResourceManager.getString("status.listening.steam.log"));
             } catch (Exception e) {
-                setStatusMessage("监听失败: " + e.getMessage());
+                setStatusMessage(ResourceManager.getFormattedString("status.listening.failed", e.getMessage()));
             }
         } else {
-            setStatusMessage("请先配置Steam路径");
+            setStatusMessage(ResourceManager.getString("status.please.configure.steam.path"));
         }
     }
 
@@ -412,7 +413,7 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
             return;
         }
         fileWatcher.stopWatching();
-        setStatusMessage("监听已停止");
+        setStatusMessage(ResourceManager.getString("status.listening.stopped"));
     }
 
     /**
@@ -435,10 +436,14 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
     }
 
     /**
-     * 设置状态消息
+     * 设置状态消息（线程安全）
+     *
+     * <p>使用Platform.runLater()确保UI操作在JavaFX应用线程中执行</p>
      */
     private void setStatusMessage(String message) {
-        statusLabel.setText(message);
+        Platform.runLater(() -> {
+            statusLabel.setText(message);
+        });
     }
 
     /**
@@ -465,13 +470,13 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
                 if (Files.exists(folderPath)) {
                     Desktop.getDesktop().open(folderPath.toFile());
                 } else {
-                    setStatusMessage("文件夹不存在: " + folderPath);
+                    setStatusMessage(ResourceManager.getFormattedString("status.folder.not.exists", folderPath));
                 }
             } catch (IOException e) {
-                setStatusMessage("打开文件夹失败: " + e.getMessage());
+                setStatusMessage(ResourceManager.getFormattedString("status.open.folder.failed", e.getMessage()));
             }
         } else {
-            setStatusMessage("请先配置Steam路径");
+            setStatusMessage(ResourceManager.getString("status.please.configure.steam.path"));
         }
     }
 
@@ -495,7 +500,7 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
             String url = "https://steamcommunity.com/sharedfiles/filedetails/?id=" + workshopId;
             Desktop.getDesktop().browse(new java.net.URI(url));
         } catch (Exception e) {
-            setStatusMessage("打开网页失败: " + e.getMessage());
+            setStatusMessage(ResourceManager.getFormattedString("status.open.webpage.failed", e.getMessage()));
         }
     }
 
@@ -540,18 +545,18 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
     private CopyConfig validateCopyConditions() {
         String steamPath = AppConfig.getSteamPath();
         if (steamPath == null || steamPath.isEmpty()) {
-            setStatusMessage("请先配置Steam路径");
+            setStatusMessage(ResourceManager.getString("status.please.configure.steam.path"));
             return null;
         }
 
         if (workshopItemsList.isEmpty()) {
-            setStatusMessage("没有可拷贝的Workshop项目");
+            setStatusMessage(ResourceManager.getString("status.no.workshop.items"));
             return null;
         }
 
         String copyPath = copyPathTextField.getText();
         if (copyPath == null || copyPath.trim().isEmpty()) {
-            setStatusMessage("请输入拷贝目标路径");
+            setStatusMessage(ResourceManager.getString("status.please.enter.copy.path"));
             return null;
         }
 
@@ -561,7 +566,7 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
             Files.createDirectories(targetDir);
             return new CopyConfig(copyVideoMode, copyPath, targetDir);
         } catch (IOException e) {
-            setStatusMessage("创建目标目录失败: " + e.getMessage());
+            setStatusMessage(ResourceManager.getFormattedString("status.create.target.dir.failed", e.getMessage()));
             return null;
         }
     }
@@ -578,7 +583,7 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
 
         // 禁用拷贝按钮，防止重复点击
         copyButton.setDisable(true);
-        setStatusMessage("开始拷贝...");
+        setStatusMessage(ResourceManager.getString("status.copy.started"));
 
         // 重置非成功项的拷贝状态
         for (WorkshopListItem item : workshopItemsList) {
@@ -703,8 +708,7 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
     private void updateFinalCopyStatus(int successCount, int failedCount) {
         Platform.runLater(() -> {
             copyButton.setDisable(false);
-            String message = String.format("拷贝完成: 成功%d个, 失败%d个",
-                    successCount, failedCount);
+            String message = ResourceManager.getFormattedString("status.copy.completed.format", successCount, failedCount);
             setStatusMessage(message);
 
             // 拷贝完成后更新系统托盘菜单中的拷贝数量

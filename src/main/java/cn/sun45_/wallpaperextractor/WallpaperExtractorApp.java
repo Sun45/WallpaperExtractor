@@ -2,6 +2,7 @@ package cn.sun45_.wallpaperextractor;
 
 import cn.sun45_.wallpaperextractor.controller.MainController;
 import cn.sun45_.wallpaperextractor.utils.AppConfig;
+import cn.sun45_.wallpaperextractor.utils.ResourceManager;
 import com.dustinredmond.fxtrayicon.FXTrayIcon;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -11,6 +12,8 @@ import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.util.Locale;
+import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -89,10 +92,10 @@ public class WallpaperExtractorApp extends Application {
                     // 直接更新第一个菜单项的标签
                     java.awt.MenuItem menuItem = trayIcon.getMenuItem(0);
                     if (menuItem != null) {
-                        menuItem.setLabel("开始拷贝 (" + count + "个)");
+                        menuItem.setLabel(ResourceManager.getFormattedString("tray.start.copy", count));
                     }
                 } catch (Exception e) {
-                    LOGGER.log(Level.WARNING, "更新系统托盘菜单失败: ", e);
+                    LOGGER.log(Level.WARNING, ResourceManager.getString("error.update.tray.menu.failed"), e);
                 }
             });
         }
@@ -149,12 +152,15 @@ public class WallpaperExtractorApp extends Application {
      * @throws IOException 如果界面加载失败
      */
     private void loadScenes() throws IOException {
+        // 加载资源包
+        ResourceBundle bundle = ResourceBundle.getBundle("cn/sun45_/wallpaperextractor/messages", Locale.CHINA);
+
         // 加载设置界面
-        FXMLLoader fxmlLoader = new FXMLLoader(WallpaperExtractorApp.class.getResource("settings-view.fxml"));
-        settingsScene = new Scene(fxmlLoader.load(), 500, 400);
+        FXMLLoader fxmlLoader = new FXMLLoader(WallpaperExtractorApp.class.getResource("settings-view.fxml"), bundle);
+        settingsScene = new Scene(fxmlLoader.load(), 500, 460);
 
         // 加载主界面并获取控制器引用
-        fxmlLoader = new FXMLLoader(WallpaperExtractorApp.class.getResource("main-view.fxml"));
+        fxmlLoader = new FXMLLoader(WallpaperExtractorApp.class.getResource("main-view.fxml"), bundle);
         mainScene = new Scene(fxmlLoader.load(), 800, 800);
         mainController = fxmlLoader.getController();
     }
@@ -185,7 +191,7 @@ public class WallpaperExtractorApp extends Application {
             Image icon = new Image(getClass().getResourceAsStream("icon.png"));
             primaryStage.getIcons().add(icon);
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "无法加载应用程序图标: ", e);
+            LOGGER.log(Level.WARNING, ResourceManager.getString("error.load.app.icon.failed"), e);
         }
     }
 
@@ -200,19 +206,14 @@ public class WallpaperExtractorApp extends Application {
             trayIcon.setTrayIconTooltip(Constants.NAME);
 
             // 添加开始拷贝菜单项，显示拷贝数量
-            trayIcon.addMenuItem("开始拷贝 (0个)", event -> {
+            trayIcon.addMenuItem(ResourceManager.getFormattedString("tray.start.copy", 0), event -> {
                 if (mainController != null) {
                     mainController.startCopying();
                 }
             });
-
             // 添加分隔线
             trayIcon.addSeparator();
-
-            trayIcon.addMenuItem("退出", event -> {
-                Platform.exit();
-                System.exit(0);
-            });
+            trayIcon.addExitItem(ResourceManager.getString("tray.exit"));
 
             // 获取底层AWT TrayIcon，精确控制点击事件
             java.awt.TrayIcon awtTrayIcon = trayIcon.getRestricted().getTrayIcon();
@@ -232,7 +233,7 @@ public class WallpaperExtractorApp extends Application {
 
             trayIcon.show();
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "系统托盘图标设置失败: ", e);
+            LOGGER.log(Level.WARNING, ResourceManager.getString("error.setup.tray.icon.failed"), e);
         }
     }
 
