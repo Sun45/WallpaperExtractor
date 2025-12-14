@@ -7,6 +7,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.canvas.Canvas?>
 <VBox alignment="CENTER" spacing="25.0" xmlns:fx="http://javafx.com/fxml"
       fx:controller="cn.sun45_.wallpaperextractor.controller.SettingsController"
       style="-fx-background-color: #f8f9fa;">
@@ -14,8 +15,16 @@
         <Insets bottom="40.0" left="50.0" right="50.0" top="40.0"/>
     </padding>
 
-    <!-- 应用标题 -->
-    <Label text="%settings.title" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #343a40;"/>
+    <!-- 应用标题和图标 -->
+    <HBox alignment="CENTER" spacing="15">
+        <StackPane onMouseClicked="#onIconClicked" style="-fx-cursor: hand;">
+            <Canvas fx:id="iconCanvas" width="60" height="60"/>
+            <ImageView fx:id="appIcon" fitWidth="32" fitHeight="32" preserveRatio="true">
+                <Image url="@icon.png"/>
+            </ImageView>
+        </StackPane>
+        <Label text="%settings.title" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #343a40;"/>
+    </HBox>
 
     <!-- 拖拽区域 -->
     <StackPane fx:id="dragArea"

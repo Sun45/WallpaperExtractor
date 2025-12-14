@@ -9,9 +9,17 @@ import java.util.prefs.Preferences;
  * 应用程序配置管理类
  *
  * <p>使用Java Preferences API管理应用程序配置，提供线程安全的配置读写操作</p>
+ *
+ * <p>主要功能：</p>
+ * <ul>
+ *   <li>Steam安装路径的保存和读取</li>
+ *   <li>拷贝目标路径的保存和读取</li>
+ *   <li>拷贝模式的保存和读取</li>
+ *   <li>配置项的清理和重置</li>
+ * </ul>
  */
 public class AppConfig {
-    private static final Preferences PREFS = Preferences.userNodeForPackage(FileUtils.class);
+    private static final Preferences PREFS = Preferences.userNodeForPackage(AppConfig.class);
 
     /**
      * 清空所有配置项

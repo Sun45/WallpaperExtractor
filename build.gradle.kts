@@ -4,11 +4,13 @@ gradle.startParameter.warningMode = org.gradle.api.logging.configuration.Warning
 
 // 配置Java编译器选项以抑制模块相关的警告
 tasks.withType<JavaCompile> {
-    options.compilerArgs.addAll(listOf(
-        "-Xlint:none",
-        "-Xdoclint:none",
-        "-nowarn"
-    ))
+    options.compilerArgs.addAll(
+        listOf(
+            "-Xlint:none",
+            "-Xdoclint:none",
+            "-nowarn"
+        )
+    )
     options.isWarnings = false
 }
 
@@ -27,7 +29,7 @@ plugins {
 }
 
 group = "cn.Sun45_"
-version = "1.0.2"
+version = "1.1.0"
 
 repositories {
     mavenCentral()
@@ -76,6 +78,7 @@ dependencies {
     implementation("com.dlsc.gemsfx:gemsfx:2.16.0")
     implementation("com.dustinredmond.fxtrayicon:FXTrayIcon:4.2.3")
     implementation("one.jpro.jproutils:tree-showing:0.2.2")
+    implementation("org.locationtech.jts:jts-core:1.19.0")
     testImplementation("org.junit.jupiter:junit-jupiter-api:${junitVersion}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${junitVersion}")
 }
@@ -115,6 +118,7 @@ tasks.register<Exec>("jpackageExe") {
         "--icon", iconPath,
         "--install-dir", "WallpaperExtractor",
         "--java-options", "-Dfile.encoding=GBK"
+//        , "--win-console"
     )
 
     doFirst {

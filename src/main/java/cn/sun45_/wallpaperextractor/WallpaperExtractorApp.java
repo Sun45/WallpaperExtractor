@@ -1,11 +1,10 @@
 package cn.sun45_.wallpaperextractor;
 
+import cn.sun45_.wallpaperextractor.component.SystemTrayManager;
 import cn.sun45_.wallpaperextractor.controller.MainController;
 import cn.sun45_.wallpaperextractor.utils.AppConfig;
 import cn.sun45_.wallpaperextractor.utils.ResourceManager;
-import com.dustinredmond.fxtrayicon.FXTrayIcon;
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
@@ -18,20 +17,18 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Wallpaper Extractor 主应用程序类
+ * 壁纸提取器应用程序主类
  *
- * <p>负责管理应用程序的生命周期、界面切换和资源管理</p>
+ * <p>负责管理应用程序的生命周期、界面切换和系统托盘功能</p>
  *
  * <p>主要功能：</p>
  * <ul>
  *   <li>应用程序初始化和启动</li>
  *   <li>界面加载和场景管理</li>
- *   <li>应用程序图标设置</li>
+ *   <li>系统托盘图标和动画管理</li>
  *   <li>主界面和设置界面的切换</li>
  *   <li>应用程序关闭时的资源清理</li>
  * </ul>
- *
- * @see Application JavaFX应用程序基类
  */
 public class WallpaperExtractorApp extends Application {
     private static final Logger LOGGER = Logger.getLogger(WallpaperExtractorApp.class.getName());
@@ -47,9 +44,9 @@ public class WallpaperExtractorApp extends Application {
     public static Stage primaryStage;
 
     /**
-     * 系统图标
+     * 系统托盘管理器
      */
-    private FXTrayIcon trayIcon;
+    private SystemTrayManager trayManager;
 
     /**
      * 设置界面场景
@@ -80,24 +77,37 @@ public class WallpaperExtractorApp extends Application {
     }
 
     /**
-     * 更新拷贝数量
+     * 更新系统托盘菜单中的拷贝数量显示
      *
-     * @param count 新的拷贝数量
+     * <p>供外部调用的公开方法，用于更新系统托盘菜单中显示的拷贝数量</p>
+     *
+     * @param copyCount 执行拷贝的数量
      */
-    public void updateCopyCount(int count) {
-        // 更新系统托盘菜单中的拷贝数量显示
-        if (trayIcon != null) {
-            Platform.runLater(() -> {
-                try {
-                    // 直接更新第一个菜单项的标签
-                    java.awt.MenuItem menuItem = trayIcon.getMenuItem(0);
-                    if (menuItem != null) {
-                        menuItem.setLabel(ResourceManager.getFormattedString("tray.start.copy", count));
-                    }
-                } catch (Exception e) {
-                    LOGGER.log(Level.WARNING, ResourceManager.getString("error.update.tray.menu.failed"), e);
-                }
-            });
+    public void updateCopyCount(int copyCount) {
+        if (trayManager != null) {
+            trayManager.updateCopyCount(copyCount);
+        }
+    }
+
+    /**
+     * 启动系统托盘动画
+     *
+     * <p>供外部调用的公开方法，用于启动系统托盘动画</p>
+     */
+    public void startTrayAnimation() {
+        if (trayManager != null) {
+            trayManager.startTrayAnimation();
+        }
+    }
+
+    /**
+     * 停止系统托盘动画
+     *
+     * <p>供外部调用的公开方法，用于停止系统托盘动画</p>
+     */
+    public void stopTrayAnimation() {
+        if (trayManager != null) {
+            trayManager.stopTrayAnimation();
         }
     }
 
@@ -119,8 +129,13 @@ public class WallpaperExtractorApp extends Application {
         // 设置应用程序图标
         setApplicationIcon();
 
-        // 设置系统托盘图标
-        setupSystemTrayIcon();
+        // 初始化系统托盘管理器
+        trayManager = new SystemTrayManager(primaryStage, () -> {
+            if (mainController != null) {
+                mainController.startCopying();
+            }
+        });
+        trayManager.initialize();
 
         // 设置窗口不可调整大小
         primaryStage.setResizable(false);
@@ -188,52 +203,13 @@ public class WallpaperExtractorApp extends Application {
      */
     private void setApplicationIcon() {
         try {
-            Image icon = new Image(getClass().getResourceAsStream("icon.png"));
-            primaryStage.getIcons().add(icon);
+            // 使用ResourceManager统一获取JavaFX格式的应用图标
+            Image icon = ResourceManager.getApplicationIconFx();
+            if (icon != null) {
+                primaryStage.getIcons().add(icon);
+            }
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, ResourceManager.getString("error.load.app.icon.failed"), e);
-        }
-    }
-
-    /**
-     * 设置系统托盘图标
-     *
-     * <p>使用FXTrayIcon创建系统托盘图标，支持应用程序最小化到系统托盘</p>
-     */
-    private void setupSystemTrayIcon() {
-        try {
-            trayIcon = new FXTrayIcon(primaryStage, getClass().getResource("icon.png"));
-            trayIcon.setTrayIconTooltip(Constants.NAME);
-
-            // 添加开始拷贝菜单项，显示拷贝数量
-            trayIcon.addMenuItem(ResourceManager.getFormattedString("tray.start.copy", 0), event -> {
-                if (mainController != null) {
-                    mainController.startCopying();
-                }
-            });
-            // 添加分隔线
-            trayIcon.addSeparator();
-            trayIcon.addExitItem(ResourceManager.getString("tray.exit"));
-
-            // 获取底层AWT TrayIcon，精确控制点击事件
-            java.awt.TrayIcon awtTrayIcon = trayIcon.getRestricted().getTrayIcon();
-            awtTrayIcon.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override
-                public void mouseClicked(java.awt.event.MouseEvent e) {
-                    // 只处理左键点击事件，右键点击自动显示菜单
-                    if (e.getButton() == java.awt.event.MouseEvent.BUTTON1) {
-                        Platform.runLater(() -> {
-                            primaryStage.show();
-                            primaryStage.toFront();
-                            primaryStage.requestFocus();
-                        });
-                    }
-                }
-            });
-
-            trayIcon.show();
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, ResourceManager.getString("error.setup.tray.icon.failed"), e);
         }
     }
 
@@ -250,6 +226,11 @@ public class WallpaperExtractorApp extends Application {
         if (mainController != null) {
             mainController.stopWatching();
         }
+
+        // 清理系统托盘资源
+        if (trayManager != null) {
+            trayManager.dispose();
+        }
         super.stop();
     }
 
@@ -263,7 +244,7 @@ public class WallpaperExtractorApp extends Application {
         if (mainController != null) {
             mainController.stopWatching();
         }
-        primaryStage.setTitle(Constants.NAME + " - 设置");
+        primaryStage.setTitle(Constants.NAME + ResourceManager.getString("settings.window.title.suffix"));
         primaryStage.setScene(settingsScene);
     }
 

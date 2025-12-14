@@ -6,15 +6,13 @@ import cn.sun45_.wallpaperextractor.component.WorkshopListCell;
 import cn.sun45_.wallpaperextractor.model.WorkshopListItem;
 import cn.sun45_.wallpaperextractor.monitor.FileWatcher;
 import cn.sun45_.wallpaperextractor.monitor.WorkshopData;
+import cn.sun45_.wallpaperextractor.service.CopyService;
+import cn.sun45_.wallpaperextractor.service.WorkshopDataService;
 import cn.sun45_.wallpaperextractor.utils.AppConfig;
-import cn.sun45_.wallpaperextractor.utils.FileUtils;
 import cn.sun45_.wallpaperextractor.utils.ResourceManager;
 import com.dlsc.gemsfx.CalendarPicker;
 import com.dlsc.gemsfx.TimePicker;
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
@@ -29,7 +27,6 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
 import java.util.List;
 
 /**
@@ -144,19 +141,19 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
     private FileWatcher fileWatcher;
 
     /**
-     * 当前设置的起始时间
+     * 起始时间过滤器
      */
-    private String currentTime;
+    private String startTimeFilter;
 
     /**
-     * Workshop项目列表（ObservableList，支持数据绑定）
+     * Workshop数据服务
      */
-    private ObservableList<WorkshopListItem> workshopItemsList;
+    private WorkshopDataService dataService;
 
     /**
-     * Workshop项目映射表（用于快速查找）
+     * 文件拷贝服务
      */
-    private Map<String, WorkshopListItem> workshopItemsMap;
+    private CopyService copyService;
 
     /**
      * 日期格式化器
@@ -184,12 +181,32 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
         LocalTime now = LocalTime.now();
         calendarPicker.setValue(today);
         timePicker.setValue(now);
-        currentTime = formatDateTime(today, now);
+        startTimeFilter = formatDateTime(today, now);
 
-        // 初始化ObservableList和Map用于ListView
-        workshopItemsList = FXCollections.observableArrayList();
-        workshopItemsMap = new HashMap<>();
-        idListView.setItems(workshopItemsList);
+        // 初始化数据服务
+        dataService = new WorkshopDataService();
+        copyService = new CopyService(dataService);
+
+        // 设置数据变化监听器
+        dataService.setOnDataChangedListener(count -> {
+            Platform.runLater(() -> {
+                if (count > 0) {
+                    countLabel.setText(ResourceManager.getFormattedString("count.label.format", count));
+                    int actualCopyCount = dataService.calculateActualCopyCount();
+                    if (WallpaperExtractorApp.application != null) {
+                        WallpaperExtractorApp.application.updateCopyCount(actualCopyCount);
+                    }
+                } else {
+                    countLabel.setText(ResourceManager.getString("count.label.zero"));
+                    if (WallpaperExtractorApp.application != null) {
+                        WallpaperExtractorApp.application.updateCopyCount(0);
+                    }
+                }
+            });
+        });
+
+        // 使用数据服务的ObservableList绑定ListView
+        idListView.setItems(dataService.getWorkshopItemsList());
 
         // 设置自定义的ListCell
         idListView.setCellFactory(param -> new WorkshopListCell(this));
@@ -226,7 +243,7 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
      */
     private void initializeData() {
         // 初始化FileWatcher
-        fileWatcher = new FileWatcher(this, currentTime);
+        fileWatcher = new FileWatcher(this, startTimeFilter);
     }
 
     /**
@@ -240,7 +257,7 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
     }
 
     /**
-     * 更新时间按钮点击事件处理
+     * 处理时间更新事件
      *
      * <p>根据用户选择的日期和时间更新文件监听的起始时间</p>
      *
@@ -253,12 +270,12 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
      * </ul>
      */
     @FXML
-    protected void onUpdateTimeClick() {
+    protected void handleTimeUpdate() {
         LocalDate selectedDate = calendarPicker.getValue();
         LocalTime selectedTime = timePicker.getTime();
         if (selectedDate != null && selectedTime != null) {
-            currentTime = formatDateTime(selectedDate, selectedTime);
-            fileWatcher.updateStartTime(currentTime);
+            startTimeFilter = formatDateTime(selectedDate, selectedTime);
+            fileWatcher.updateStartTime(startTimeFilter);
             setStatusMessage(ResourceManager.getFormattedString("status.set.start.time.format", selectedDate, selectedTime));
         }
     }
@@ -280,108 +297,10 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
      */
     @Override
     public void onFileChanged(List<WorkshopData> workshopDataList) {
-        Platform.runLater(() -> {
-            if (workshopDataList != null && !workshopDataList.isEmpty()) {
-                updateWorkshopItems(workshopDataList);
-                int totalCount = workshopDataList.size();
-                countLabel.setText(ResourceManager.getFormattedString("count.label.format", totalCount));
-
-                int actualCopyCount = calculateActualCopyCount();
-                if (WallpaperExtractorApp.application != null) {
-                    WallpaperExtractorApp.application.updateCopyCount(actualCopyCount);
-                }
-            } else {
-                clearWorkshopItems();
-                countLabel.setText(ResourceManager.getString("count.label.zero"));
-
-                if (WallpaperExtractorApp.application != null) {
-                    WallpaperExtractorApp.application.updateCopyCount(0);
-                }
-            }
-        });
+        // 使用数据服务处理数据更新，监听器会自动更新界面
+        dataService.updateWorkshopItems(workshopDataList);
     }
 
-    /**
-     * 计算实际会拷贝的项目数量
-     *
-     * @return 实际会拷贝的项目数量（排除已经拷贝成功的项目）
-     */
-    private int calculateActualCopyCount() {
-        if (workshopItemsList == null || workshopItemsList.isEmpty()) {
-            return 0;
-        }
-
-        int count = 0;
-        for (WorkshopListItem item : workshopItemsList) {
-            // 只计算非成功状态的项目（NOT_COPIED, COPYING, FAILED）
-            if (item.getCopyStatus() != WorkshopListItem.CopyStatus.SUCCESS) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    /**
-     * 更新workshop项目列表
-     *
-     * @param workshopDataList 新的workshop模型列表
-     */
-    private void updateWorkshopItems(List<WorkshopData> workshopDataList) {
-        // 使用Set来跟踪需要保留的项目ID
-        Set<String> currentIds = new HashSet<>();
-
-        for (WorkshopData workshopData : workshopDataList) {
-            String itemId = workshopData.getId();
-            currentIds.add(itemId);
-
-            WorkshopListItem existingItem = workshopItemsMap.get(itemId);
-
-            if (existingItem != null) {
-                // 更新现有项目
-                WorkshopData existingModel = existingItem.getWorkshopData();
-                existingModel.setTime(workshopData.getTime());
-                existingModel.setSubscribed(workshopData.isSubscribed());
-            } else {
-                // 创建新项目并添加到Map和List
-                WorkshopListItem newItem = new WorkshopListItem(workshopData);
-                workshopItemsMap.put(itemId, newItem);
-                workshopItemsList.add(newItem);
-            }
-        }
-
-        // 移除不再存在的项目
-        removeObsoleteItems(currentIds);
-    }
-
-    /**
-     * 移除不再存在的项目
-     *
-     * @param currentIds 当前有效的项目ID集合
-     */
-    private void removeObsoleteItems(Set<String> currentIds) {
-        // 创建需要移除的项目列表
-        List<WorkshopListItem> itemsToRemove = new ArrayList<>();
-
-        for (WorkshopListItem item : workshopItemsList) {
-            if (!currentIds.contains(item.getId())) {
-                itemsToRemove.add(item);
-            }
-        }
-
-        // 批量移除项目
-        workshopItemsList.removeAll(itemsToRemove);
-        for (WorkshopListItem item : itemsToRemove) {
-            workshopItemsMap.remove(item.getId());
-        }
-    }
-
-    /**
-     * 清空workshop项目列表
-     */
-    private void clearWorkshopItems() {
-        workshopItemsList.clear();
-        workshopItemsMap.clear();
-    }
 
     /**
      * 启动文件监听（当主界面显示时调用）
@@ -524,274 +443,58 @@ public class MainController implements FileWatcher.FileChangeListener, WorkshopL
      */
     @FXML
     protected void onCopyButtonClick() {
-        // 验证拷贝条件,并获取拷贝配置
-        CopyConfig copyConfig = validateCopyConditions();
-        if (copyConfig == null) {
-            return;
-        }
-
-        // 准备拷贝
-        prepareCopyTask(copyConfig);
-
-        // 开始拷贝
-        startCopyTask(copyConfig);
-    }
-
-    /**
-     * 验证拷贝条件是否满足,并获取拷贝配置
-     *
-     * @return 拷贝配置对象，如果配置无效返回null
-     */
-    private CopyConfig validateCopyConditions() {
-        String steamPath = AppConfig.getSteamPath();
-        if (steamPath == null || steamPath.isEmpty()) {
-            setStatusMessage(ResourceManager.getString("status.please.configure.steam.path"));
-            return null;
-        }
-
-        if (workshopItemsList.isEmpty()) {
-            setStatusMessage(ResourceManager.getString("status.no.workshop.items"));
-            return null;
-        }
-
-        String copyPath = copyPathTextField.getText();
-        if (copyPath == null || copyPath.trim().isEmpty()) {
-            setStatusMessage(ResourceManager.getString("status.please.enter.copy.path"));
-            return null;
-        }
-
-        boolean copyVideoMode = copyVideoRadioButton.isSelected();
         try {
-            Path targetDir = Paths.get(copyPath);
-            Files.createDirectories(targetDir);
-            return new CopyConfig(copyVideoMode, copyPath, targetDir);
-        } catch (IOException e) {
-            setStatusMessage(ResourceManager.getFormattedString("status.create.target.dir.failed", e.getMessage()));
-            return null;
-        }
-    }
+            // 验证拷贝条件并获取配置
+            String copyPath = copyPathTextField.getText();
+            boolean copyVideoMode = copyVideoRadioButton.isSelected();
+            CopyService.CopyConfig copyConfig = copyService.validateCopyConditions(copyPath, copyVideoMode);
 
-    /**
-     * 准备拷贝
-     *
-     * @param copyConfig 拷贝配置
-     */
-    private void prepareCopyTask(CopyConfig copyConfig) {
-        // 保存拷贝路径和拷贝模式
-        AppConfig.saveCopyPath(copyConfig.getCopyPath());
-        AppConfig.saveCopyMode(copyConfig.isCopyVideoMode());
+            // 保存配置
+            AppConfig.saveCopyPath(copyConfig.getCopyPath());
+            AppConfig.saveCopyMode(copyConfig.isCopyVideoMode());
 
-        // 禁用拷贝按钮，防止重复点击
-        copyButton.setDisable(true);
-        setStatusMessage(ResourceManager.getString("status.copy.started"));
+            // 准备拷贝
+            copyButton.setDisable(true);
+            setStatusMessage(ResourceManager.getString("status.copy.started"));
 
-        // 重置非成功项的拷贝状态
-        for (WorkshopListItem item : workshopItemsList) {
-            if (item.getCopyStatus() != WorkshopListItem.CopyStatus.SUCCESS) {
-                item.setCopyStatus(WorkshopListItem.CopyStatus.NOT_COPIED);
-            }
-        }
-    }
-
-    /**
-     * 开始拷贝任务
-     *
-     * @param copyConfig 拷贝配置
-     */
-    private void startCopyTask(CopyConfig copyConfig) {
-        Task<Void> copyTask = createCopyTask(copyConfig);
-        Thread copyThread = new Thread(copyTask);
-        copyThread.setDaemon(true);
-        copyThread.start();
-    }
-
-    /**
-     * 创建拷贝任务
-     *
-     * @param copyConfig 拷贝配置
-     * @return 拷贝任务对象
-     */
-    private Task<Void> createCopyTask(CopyConfig copyConfig) {
-        return new Task<Void>() {
-            @Override
-            protected Void call() throws Exception {
-                return executeCopyOperation(copyConfig);
-            }
-        };
-    }
-
-    /**
-     * 执行拷贝操作
-     *
-     * @param copyConfig 拷贝配置
-     * @return 总是返回null
-     */
-    private Void executeCopyOperation(CopyConfig copyConfig) {
-        int totalCount = workshopItemsList.size();
-        int successCount = 0;
-        int failedCount = 0;
-
-        for (int i = 0; i < totalCount; i++) {
-            WorkshopListItem item = workshopItemsList.get(i);
-
-            // 跳过已经拷贝成功的项
-            if (item.getCopyStatus() == WorkshopListItem.CopyStatus.SUCCESS) {
-                continue;
-            }
-
-            // 更新当前项状态为拷贝中
-            updateItemCopyStatus(item, i, WorkshopListItem.CopyStatus.COPYING, "");
-
-            try {
-                copyItem(item, copyConfig);
-                successCount++;
-
-                // 更新当前项状态为成功
-                updateItemCopyStatus(item, i, WorkshopListItem.CopyStatus.SUCCESS, "");
-            } catch (Exception e) {
-                failedCount++;
-                updateItemCopyStatus(item, i, WorkshopListItem.CopyStatus.FAILED, e.getMessage());
-            }
-        }
-
-        // 更新最终状态
-        updateFinalCopyStatus(successCount, failedCount);
-        return null;
-    }
-
-    /**
-     * 拷贝单个项目
-     *
-     * @param item       要拷贝的项目
-     * @param copyConfig 拷贝配置
-     * @throws IOException 如果拷贝失败，抛出包含详细错误信息的异常
-     */
-    private void copyItem(WorkshopListItem item, CopyConfig copyConfig) throws IOException {
-        String steamPath = AppConfig.getSteamPath();
-        Path sourceDir = Paths.get(steamPath, Constants.WORKSHOP_CONTENT_PATH, item.getId());
-
-        try {
-            if (copyConfig.isCopyVideoMode()) {
-                FileUtils.copyVideoFiles(sourceDir, copyConfig.getTargetDir());
-            } else {
-                FileUtils.copyDirectory(sourceDir, copyConfig.getTargetDir());
-            }
-            // 拷贝成功后删除源目录
-            FileUtils.deleteDirectory(sourceDir);
-        } catch (IOException e) {
-            // 重新抛出异常，让调用方处理
-            throw e;
-        }
-    }
-
-    /**
-     * 更新项目拷贝状态
-     *
-     * @param item    要更新的项目
-     * @param index   项目索引
-     * @param status  新的状态
-     * @param message 状态消息
-     */
-    private void updateItemCopyStatus(WorkshopListItem item, int index, WorkshopListItem.CopyStatus status, String message) {
-        Platform.runLater(() -> {
-            item.setCopyStatus(status, message);
-            workshopItemsList.set(index, item);
-        });
-    }
-
-    /**
-     * 更新最终拷贝状态
-     *
-     * @param successCount 成功数量
-     * @param failedCount  失败数量
-     */
-    private void updateFinalCopyStatus(int successCount, int failedCount) {
-        Platform.runLater(() -> {
-            copyButton.setDisable(false);
-            String message = ResourceManager.getFormattedString("status.copy.completed.format", successCount, failedCount);
-            setStatusMessage(message);
-
-            // 拷贝完成后更新系统托盘菜单中的拷贝数量
-            int actualCopyCount = calculateActualCopyCount();
+            // 启动系统托盘动画
             if (WallpaperExtractorApp.application != null) {
-                WallpaperExtractorApp.application.updateCopyCount(actualCopyCount);
+                WallpaperExtractorApp.application.startTrayAnimation();
             }
-        });
-    }
 
-    /**
-     * 拷贝配置类
-     *
-     * <p>封装文件拷贝操作的相关配置参数</p>
-     *
-     * <p>主要用途：</p>
-     * <ul>
-     *   <li>统一管理拷贝操作的配置参数</li>
-     *   <li>提供类型安全的配置访问</li>
-     *   <li>简化拷贝任务参数的传递</li>
-     * </ul>
-     *
-     * <p>配置参数：</p>
-     * <ul>
-     *   <li>拷贝模式：视频文件模式或目录模式</li>
-     *   <li>拷贝路径：用户指定的目标路径</li>
-     *   <li>目标目录：解析后的目标目录路径对象</li>
-     * </ul>
-     */
-    private static class CopyConfig {
-        /**
-         * 拷贝模式：true表示拷贝视频文件模式，false表示拷贝目录模式
-         */
-        private final boolean copyVideoMode;
+            // 重置非成功项的拷贝状态
+            dataService.resetNonSuccessCopyStatus();
 
-        /**
-         * 拷贝目标路径字符串
-         */
-        private final String copyPath;
+            // 开始拷贝
+            copyService.startCopy(copyConfig,
+                    (successCount, failedCount) -> {
+                        // 拷贝完成回调
+                        Platform.runLater(() -> {
+                            copyButton.setDisable(false);
+                            String message = ResourceManager.getFormattedString("status.copy.completed.format", successCount, failedCount);
+                            setStatusMessage(message);
 
-        /**
-         * 拷贝目标目录路径对象
-         */
-        private final Path targetDir;
+                            // 停止系统托盘动画
+                            if (WallpaperExtractorApp.application != null) {
+                                WallpaperExtractorApp.application.stopTrayAnimation();
+                            }
 
-        /**
-         * 构造函数
-         *
-         * @param copyVideoMode 拷贝模式：true表示拷贝视频文件模式，false表示拷贝目录模式
-         * @param copyPath      拷贝目标路径字符串
-         * @param targetDir     拷贝目标目录路径对象
-         */
-        public CopyConfig(boolean copyVideoMode, String copyPath, Path targetDir) {
-            this.copyVideoMode = copyVideoMode;
-            this.copyPath = copyPath;
-            this.targetDir = targetDir;
-        }
+                            // 更新系统托盘菜单中的拷贝数量
+                            int actualCopyCount = dataService.calculateActualCopyCount();
+                            if (WallpaperExtractorApp.application != null) {
+                                WallpaperExtractorApp.application.updateCopyCount(actualCopyCount);
+                            }
+                        });
+                    });
 
-        /**
-         * 获取拷贝模式
-         *
-         * @return true表示拷贝视频文件模式，false表示拷贝目录模式
-         */
-        public boolean isCopyVideoMode() {
-            return copyVideoMode;
-        }
-
-        /**
-         * 获取拷贝目标路径
-         *
-         * @return 拷贝目标路径字符串
-         */
-        public String getCopyPath() {
-            return copyPath;
-        }
-
-        /**
-         * 获取拷贝目标目录
-         *
-         * @return 拷贝目标目录路径对象
-         */
-        public Path getTargetDir() {
-            return targetDir;
+        } catch (IllegalArgumentException e) {
+            // 参数异常，通常是用户输入错误或配置问题，直接显示异常消息
+            setStatusMessage(e.getMessage());
+            copyButton.setDisable(false);
+        } catch (Exception e) {
+            // 其他异常，显示通用的拷贝失败消息
+            setStatusMessage(ResourceManager.getFormattedString("status.copy.failed", e.getMessage()));
+            copyButton.setDisable(false);
         }
     }
 }

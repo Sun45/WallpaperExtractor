@@ -2,11 +2,14 @@ package cn.sun45_.wallpaperextractor.controller;
 
 import cn.sun45_.wallpaperextractor.Constants;
 import cn.sun45_.wallpaperextractor.WallpaperExtractorApp;
+import cn.sun45_.wallpaperextractor.component.IconAnimation;
 import cn.sun45_.wallpaperextractor.utils.AppConfig;
 import cn.sun45_.wallpaperextractor.utils.ResourceManager;
 import javafx.fxml.FXML;
+import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.StackPane;
@@ -55,9 +58,23 @@ public class SettingsController {
     private Hyperlink githubLink;
 
     @FXML
+    private Canvas iconCanvas;
+
+    @FXML
+    private ImageView appIcon;
+
+    private IconAnimation iconAnimation;
+
+    @FXML
     public void initialize() {
         descriptionLabel.setText(Constants.PROJECT_DESCRIPTION);
         setupDragAndDrop();
+        setupIconAnimation();
+    }
+
+    private void setupIconAnimation() {
+        // 初始化IconAnimation
+        iconAnimation = new IconAnimation(iconCanvas);
     }
 
     @FXML
@@ -69,6 +86,11 @@ public class SettingsController {
             hintLabel.setText(ResourceManager.getFormattedString("status.github.open.error.format", e.getMessage()));
             hintLabel.setTextFill(Color.RED);
         }
+    }
+
+    @FXML
+    protected void onIconClicked() {
+        iconAnimation.startAnimation();
     }
 
     private void setupDragAndDrop() {

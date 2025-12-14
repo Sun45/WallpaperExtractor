@@ -17,6 +17,8 @@ module cn.sun45_.wallpaperextractor {
     requires java.logging;
     requires com.dustinredmond.fxtrayicon;
     requires javafx.base;
+    requires org.locationtech.jts;
+    requires javafx.swing;
 
     opens cn.sun45_.wallpaperextractor to javafx.fxml;
     exports cn.sun45_.wallpaperextractor;

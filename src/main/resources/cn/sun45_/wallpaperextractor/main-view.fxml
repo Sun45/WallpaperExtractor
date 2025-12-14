@@ -26,7 +26,7 @@
         <Label text="%start.time.label" style="-fx-font-size: 12px; -fx-text-fill: #6c757d;"/>
         <CalendarPicker fx:id="calendarPicker" prefWidth="130" style="-fx-font-size: 11px;"/>
         <TimePicker fx:id="timePicker" prefWidth="110" style="-fx-font-size: 11px;"/>
-        <Button fx:id="updateTimeButton" text="%update.time.button" onAction="#onUpdateTimeClick"
+        <Button fx:id="updateTimeButton" text="%update.time.button" onAction="#handleTimeUpdate"
                 style="-fx-background-color: #007bff; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 5px 10px; -fx-background-radius: 4px;"/>
     </HBox>
 

@@ -17,6 +17,13 @@ import java.util.stream.Stream;
  * 文件操作工具类
  *
  * <p>提供文件拷贝、目录操作等常用工具方法</p>
+ *
+ * <p>主要功能：</p>
+ * <ul>
+ *   <li>视频文件拷贝（支持多种视频格式）</li>
+ *   <li>目录递归拷贝（保持目录结构）</li>
+ *   <li>目录安全删除（递归删除所有内容）</li>
+ * </ul>
  */
 public class FileUtils {
     private static final Logger LOGGER = Logger.getLogger(FileUtils.class.getName());
